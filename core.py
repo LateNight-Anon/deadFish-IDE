@@ -68,7 +68,7 @@ def writeCodeToFile() -> None:
     try:
         if directory[-4] + directory[-3] + directory[-2] + directory[-1] == "dead": file = open(directory,'w')
         else: Thread(target=createErrorMessage,args=("invalid file extension",)).start()
-    except FileNotFoundError: Thread(target=createErrorMessage,args=("invalid file",)).start()
+    except Exception: Thread(target=createErrorMessage,args=("invalid file",)).start()
     else:
         with file: file.write(programEntry.get('1.0','end-1c'))
 
