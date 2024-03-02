@@ -1,8 +1,10 @@
 #A visual IDE for deadFish and similare
 
-from tkinter import Tk, Text, Label, Button
+from tkinter import Tk, Text, Label, Button, END
+from tkinter.filedialog import askopenfilename
 from threading import Thread
 from time import sleep
+from csv import reader
 
 app = Tk()
 app.resizable(width=False, height=False)
@@ -14,10 +16,11 @@ programEntry.place(x=25,y=90)
 syntaxErrorLabel = Label(text="program is empty", fg="orange",font=("Arial",25))
 syntaxErrorLabel.place(x=20,y=840)
 
-def createErrorMessage() -> None:
-    errorLabel.configure(font=("Arial",25))
+def createErrorMessage(message: str) -> None:
+    errorLabel.place(x=50,y=30)
+    errorLabel.configure(text=message)
     sleep(2)
-    errorLabel.configure(font=("Arial",0))
+    errorLabel.place(x=999,y=999)
 
 def errorChecking() -> None:
     global program
@@ -35,74 +38,61 @@ def errorChecking() -> None:
             syntaxErrorLabel.configure(text="program is empty", fg="orange")
 
 def interpret() -> None:
-    global accumulator
-    outputWindow = Tk()
-    outputWindow.title("deadFish interpreter")
-    outputWindow.configure(bg="white")
-    outputWindow.geometry("100x100")
-    outputStr: str = ""
-    outputLabel = Label(outputWindow,text="",font=("Arial",60),bg="white")
-    outputLabel.place(x=0,y=0)
-    for i, char in enumerate(program):
-        if char == 'i': accumulator += 1
-        elif char == 'd': accumulator -= 1
-        elif char == 's': accumulator **= 2
-        elif char == 'o':
-            if i + 1 != len(program): outputStr += str(accumulator) + ","
-            else: outputStr += str(accumulator)
-            outputLabel.configure(text=outputStr)
-            outputLabel.geometry(str(100 * len(outputStr)) + "x100")
+    accumulator: int = 0
+    for command in program:
+        if command == 'i': accumulator += 1
+        elif command == 'd': accumulator -= 1
+        elif command == 's': accumulator **= 2
+        elif command == 'o': print(accumulator, end=' ')
         else:
-            print("error in char",i)
+            print("\nerror detected")
             return
-        #accumulator overload checks
         if accumulator > 255: accumulator = 0
-        elif accumulator < 0: accumulator = 255
+        if accumulator < 0: accumulator = 255
 
 def openCode() -> None:
-    def createErrorMessage() -> None:
-        errorLabel.configure(font=("Arial",25))
-        sleep(2)
-        errorLabel.configure(font=("Arial",0))
-        
-    def submit() -> None:
-        global program
-        try:
-            with open(directory, 'r') as file:
-                program = file.readline()
-        except Exception:
-            Thread(target=createErrorMessage).start()
-                
-    directory: str = None
-    selectionWindow = Tk()
-    selectionWindow.resizable(width=False,height=False)
-    selectionWindow.title("read from file")
-    selectionWindow.geometry("500x500")
-    Label(text="select file to read",font=("Arial",15)).place(x=180,y=30)
+    directory: str = askopenfilename()
+    try:
+        if directory[-4] + directory[-3] + directory[-2] + directory[-1] == "dead": file = open(directory,'r')
+        else: Thread(target=createErrorMessage,args=("invalid file extension",)).start()
+    except Exception: Thread(target=createErrorMessage,args=("invalid file",)).start()
+    else:
+        with file:
+            fileData = next(reader(file))
+            print(fileData)
+            programEntry.delete('1.0', END)
+            programEntry.insert(END,fileData)
 
 def writeCodeToFile() -> None:
-    def submit() -> None:
-        try:
-            with open(directory,'w') as file:
-                file.write(program)
-        except Exception:
-            Thread(target=createErrorMessage).start()
+    directory: str = askopenfilename()
+    try:
+        if directory[-4] + directory[-3] + directory[-2] + directory[-1] == "dead": file = open(directory,'w')
+        else: Thread(target=createErrorMessage,args=("invalid file extension",)).start()
+    except FileNotFoundError: Thread(target=createErrorMessage,args=("invalid file",)).start()
+    else:
+        with file: file.write(programEntry.get('1.0','end-1c'))
 
-    directory: str = None
-    selectionWindow = Tk()
-    selectionWindow.resizable(width=False,height=False)
-    selectionWindow.title("write to file")
-    selectionWindow.geometry("500x500")
-    Label(text="select file to read",font=("Arial",15)).place(x=180,y=30)
-    errorLabel = Label(text="invalid file",font=("Arial",0),fg="red")
-    errorLabel.place(x=30,y=400)
+def liveAccumulator() -> None:
+    while True:
+        accumulator: int = 0
+        for command in program:
+            if command == 'i': accumulator += 1
+            elif command == 'd': accumulator -= 1
+            elif command == 's': accumulator **= 2
+            if accumulator > 255: accumulator = 0
+            elif accumulator < 0: accumulator = 255
+        accumulatorLabel.configure(text=accumulator)
 
 Button(text="open file",command=openCode,font=("Arial",15),borderwidth=4,relief="solid").place(x=630,y=842)
 Button(text="save file",command=writeCodeToFile,font=("Arial",15),borderwidth=4,relief="solid").place(x=750,y=842)
 Button(text="execute",command=interpret,font=("Arial",15),borderwidth=4,relief="solid").place(x=870,y=842)
+errorLabel = Label(text="",font=("Arial",25),fg="red")
+errorLabel.place(x=999,y=999)
+accumulatorLabel = Label(text="accumulator = 0",font=("Arial",25))
+accumulatorLabel.place(x=400,y=845)
 
-accumulator: int = 0
 program: str = ""
 Thread(target=errorChecking).start()
+Thread(target=liveAccumulator).start()
 
 app.mainloop()
