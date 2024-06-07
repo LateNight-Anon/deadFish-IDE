@@ -1,4 +1,4 @@
-#A visual IDE for deadFish and similare
+#A GUI IDE for the esoteric programming languahe DeadFish
 
 from tkinter import Tk, Text, Label, Button, END
 from tkinter.filedialog import askopenfilename
